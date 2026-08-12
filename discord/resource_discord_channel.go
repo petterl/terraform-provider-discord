@@ -50,10 +50,13 @@ func getChannelSchema(channelType string, s map[string]*schema.Schema) map[strin
 			Description: "Name of the channel.",
 		},
 		"position": {
-			Type:        schema.TypeInt,
-			Default:     1,
-			Optional:    true,
-			Description: "Position of the channel, `0`-indexed.",
+			Type:     schema.TypeInt,
+			Default:  1,
+			Optional: true,
+			Description: "Position of the channel, `0`-indexed. " +
+				"**Deprecated** — Discord normalises channel positions per-type within each category, which makes per-channel position values diverge from what you set in HCL and produces permanent state drift. " +
+				"Use `discord_channel_order` instead to manage ordering atomically via Discord's bulk reorder endpoint.",
+			Deprecated: "Use the discord_channel_order resource to manage channel ordering atomically. The per-channel position field cannot produce a stable plan on guilds with many channels.",
 			ValidateFunc: func(val interface{}, key string) (warns []string, errors []error) {
 				v := val.(int)
 
@@ -206,6 +209,12 @@ func resourceChannelCreate(ctx context.Context, d *schema.ResourceData, m interf
 	d.Set("server_id", serverId)
 	d.Set("channel_id", channel.ID)
 
+	if channelType == "forum" {
+		if err := applyForumChannelPatch(ctx, client, channel.ID, d, false); err != nil {
+			return append(diags, diag.Errorf("Failed to apply forum channel config to %s: %s", channel.ID, err.Error())...)
+		}
+	}
+
 	if !isCategoryCh {
 		if v, ok := d.GetOk("sync_perms_with_category"); ok && v.(bool) {
 			if channel.ParentID == "" {
@@ -253,7 +262,12 @@ func resourceChannelRead(ctx context.Context, d *schema.ResourceData, m interfac
 		}
 	case "forum":
 		{
+			d.Set("topic", channel.Topic)
+			d.Set("nsfw", channel.NSFW)
 			d.Set("rate_limit_per_user", channel.RateLimitPerUser)
+			if err := readForumChannelFields(ctx, client, channel.ID, d); err != nil {
+				return diag.Errorf("Failed to read forum channel config for %s: %s", channel.ID, err.Error())
+			}
 		}
 	case "voice":
 		{
@@ -343,6 +357,12 @@ func resourceChannelUpdate(ctx context.Context, d *schema.ResourceData, m interf
 	}, discordgo.WithContext(ctx))
 	if err != nil {
 		return diag.Errorf("Failed to update channel %s: %s", d.Id(), err.Error())
+	}
+
+	if channelType == "forum" {
+		if err := applyForumChannelPatch(ctx, client, d.Id(), d, true); err != nil {
+			return diag.Errorf("Failed to apply forum channel config to %s: %s", d.Id(), err.Error())
+		}
 	}
 
 	if channelType != "category" {
