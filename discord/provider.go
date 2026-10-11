@@ -20,39 +20,41 @@ func Provider(version string) func() *schema.Provider {
 				"client_id": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "OAuth app client ID. Currently unused.",
+					Description: "OAuth2 client ID of an application owned by a user who may manage the server and its roles. Only needed by `discord_application_command_permissions`, which Discord lets no bot token write. This can also be set via the `DISCORD_CLIENT_ID` environment variable.",
 				},
 				"secret": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "OAuth app secret. Currently unused.",
+					Sensitive:   true,
+					Description: "OAuth2 client secret belonging to `client_id`. This can also be set via the `DISCORD_CLIENT_SECRET` environment variable.",
 				},
 			},
 
 			ResourcesMap: map[string]*schema.Resource{
-				"discord_server":                    resourceDiscordServer(),
-				"discord_managed_server":            resourceDiscordManagedServer(),
-				"discord_category_channel":          resourceDiscordCategoryChannel(),
-				"discord_forum_channel":             resourceDiscordForumChannel(),
-				"discord_text_channel":              resourceDiscordTextChannel(),
-				"discord_voice_channel":             resourceDiscordVoiceChannel(),
-				"discord_news_channel":              resourceDiscordNewsChannel(),
-				"discord_channel_permission":        resourceDiscordChannelPermission(),
-				"discord_channel_order":             resourceDiscordChannelOrder(),
-				"discord_invite":                    resourceDiscordInvite(),
-				"discord_role":                      resourceDiscordRole(),
-				"discord_role_positions":            resourceDiscordRolePositions(),
-				"discord_role_everyone":             resourceDiscordRoleEveryone(),
-				"discord_member_roles":              resourceDiscordMemberRoles(),
-				"discord_role_connection_metadata":  resourceDiscordRoleConnectionMetadata(),
-				"discord_message":                   resourceDiscordMessage(),
-				"discord_thread":                    resourceDiscordThread(),
-				"discord_guild_sticker":             resourceDiscordGuildSticker(),
-				"discord_system_channel":            resourceDiscordSystemChannel(),
-				"discord_webhook":                   resourceDiscordWebhook(),
-				"discord_server_onboarding":         resourceDiscordServerOnboarding(),
-				"discord_server_widget":             resourceDiscordServerWidget(),
-				"discord_auto_moderation_rule":      resourceDiscordAutoModerationRule(),
+				"discord_server":                          resourceDiscordServer(),
+				"discord_managed_server":                  resourceDiscordManagedServer(),
+				"discord_category_channel":                resourceDiscordCategoryChannel(),
+				"discord_forum_channel":                   resourceDiscordForumChannel(),
+				"discord_text_channel":                    resourceDiscordTextChannel(),
+				"discord_voice_channel":                   resourceDiscordVoiceChannel(),
+				"discord_news_channel":                    resourceDiscordNewsChannel(),
+				"discord_channel_permission":              resourceDiscordChannelPermission(),
+				"discord_channel_order":                   resourceDiscordChannelOrder(),
+				"discord_invite":                          resourceDiscordInvite(),
+				"discord_role":                            resourceDiscordRole(),
+				"discord_role_positions":                  resourceDiscordRolePositions(),
+				"discord_role_everyone":                   resourceDiscordRoleEveryone(),
+				"discord_member_roles":                    resourceDiscordMemberRoles(),
+				"discord_role_connection_metadata":        resourceDiscordRoleConnectionMetadata(),
+				"discord_message":                         resourceDiscordMessage(),
+				"discord_thread":                          resourceDiscordThread(),
+				"discord_guild_sticker":                   resourceDiscordGuildSticker(),
+				"discord_system_channel":                  resourceDiscordSystemChannel(),
+				"discord_webhook":                         resourceDiscordWebhook(),
+				"discord_server_onboarding":               resourceDiscordServerOnboarding(),
+				"discord_server_widget":                   resourceDiscordServerWidget(),
+				"discord_auto_moderation_rule":            resourceDiscordAutoModerationRule(),
+				"discord_application_command_permissions": resourceDiscordApplicationCommandPermissions(),
 			},
 
 			DataSourcesMap: map[string]*schema.Resource{
@@ -91,8 +93,8 @@ func providerConfigure(version string) func(ctx context.Context, d *schema.Resou
 		}
 		config := Config{
 			Token:    "Bot " + token,
-			ClientID: d.Get("client_id").(string),
-			Secret:   d.Get("secret").(string),
+			ClientID: stringOrEnv(d, "client_id", "DISCORD_CLIENT_ID"),
+			Secret:   stringOrEnv(d, "secret", "DISCORD_CLIENT_SECRET"),
 		}
 
 		client, err := config.Client(version)
@@ -102,4 +104,11 @@ func providerConfigure(version string) func(ctx context.Context, d *schema.Resou
 
 		return client, diags
 	}
+}
+
+func stringOrEnv(d *schema.ResourceData, key, env string) string {
+	if v, ok := d.GetOk(key); ok {
+		return v.(string)
+	}
+	return os.Getenv(env)
 }

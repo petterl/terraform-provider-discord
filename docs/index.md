@@ -37,6 +37,6 @@ resource "discord_server" "my_server" {
 
 ### Optional
 
-- `client_id` (String) OAuth app client ID. Currently unused.
-- `secret` (String) OAuth app secret. Currently unused.
+- `client_id` (String) OAuth2 client ID of an application owned by a user who may manage the server and its roles. Only needed by `discord_application_command_permissions`, which Discord lets no bot token write. This can also be set via the `DISCORD_CLIENT_ID` environment variable.
+- `secret` (String, Sensitive) OAuth2 client secret belonging to `client_id`. This can also be set via the `DISCORD_CLIENT_SECRET` environment variable.
 - `token` (String) Discord API token, without the `Bot` prefix. This can be found in the Discord Developer Portal. This can also be set via the `DISCORD_TOKEN` environment variable.
