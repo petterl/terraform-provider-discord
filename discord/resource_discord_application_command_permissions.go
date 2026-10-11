@@ -39,7 +39,8 @@ func resourceDiscordApplicationCommandPermissions() *schema.Resource {
 			"The resource owns the whole list for its command: anything set by hand that is not in the configuration is removed on the next apply.\n\n" +
 			"Reading works with the provider's bot token, for any application's commands. " +
 			"**Writing does not**: Discord accepts only an OAuth2 Bearer token for it, from a user who may manage the server and its roles. " +
-			"Set `client_id` and `secret` on the provider to an application owned by such a user; the provider then uses the client-credentials grant, which yields a token for the owner. " +
+			"Set `client_id` and `secret` on the provider to the credentials of **the application that owns the command**; the provider then uses the client-credentials grant, which yields a token for the owner. " +
+			"A token from another application is refused with 403, even when both have the same owner, so managing several applications' commands takes one aliased provider per application. " +
 			"A team-owned application does not work, since the team is not a member of the server.",
 
 		Schema: map[string]*schema.Schema{
