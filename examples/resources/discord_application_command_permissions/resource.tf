@@ -1,14 +1,18 @@
-# Writing needs a Bearer token, so the provider gets an application's client
-# credentials. The application must be owned by a user who may manage the
-# server and its roles; reading works with the bot token alone.
+# Writing needs a Bearer token from the application that owns the command —
+# another application's is refused, even with the same owner. Its owner must be
+# allowed to manage the server and its roles. Reading works with the bot token
+# alone, so plan needs no credentials.
 provider "discord" {
+  alias     = "report_bot"
   token     = var.discord_token
-  client_id = var.discord_client_id
-  secret    = var.discord_client_secret
+  client_id = var.report_bot_client_id
+  secret    = var.report_bot_client_secret
 }
 
 # Hide /report from everyone but moderators and one channel.
 resource "discord_application_command_permissions" "report" {
+  provider = discord.report_bot
+
   server_id      = var.server_id
   application_id = var.bot_application_id
   command_id     = var.report_command_id

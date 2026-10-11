@@ -20,7 +20,7 @@ func Provider(version string) func() *schema.Provider {
 				"client_id": {
 					Type:        schema.TypeString,
 					Optional:    true,
-					Description: "OAuth2 client ID of an application owned by a user who may manage the server and its roles. Only needed by `discord_application_command_permissions`, which Discord lets no bot token write. This can also be set via the `DISCORD_CLIENT_ID` environment variable.",
+					Description: "OAuth2 client ID of the application whose command permissions `discord_application_command_permissions` writes — Discord refuses a token from any other application, even one with the same owner, and lets no bot token write them at all. The application must be owned by a user who may manage the server and its roles. To manage several applications' commands, use one aliased provider per application. This can also be set via the `DISCORD_CLIENT_ID` environment variable.",
 				},
 				"secret": {
 					Type:        schema.TypeString,

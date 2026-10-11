@@ -4,29 +4,33 @@ page_title: "discord_application_command_permissions Resource - discord"
 subcategory: ""
 description: |-
   Who may use an application's slash commands in a server — what Server Settings → Integrations edits. The resource owns the whole list for its command: anything set by hand that is not in the configuration is removed on the next apply.
-  Reading works with the provider's bot token, for any application's commands. Writing does not: Discord accepts only an OAuth2 Bearer token for it, from a user who may manage the server and its roles. Set client_id and secret on the provider to an application owned by such a user; the provider then uses the client-credentials grant, which yields a token for the owner. A team-owned application does not work, since the team is not a member of the server.
+  Reading works with the provider's bot token, for any application's commands. Writing does not: Discord accepts only an OAuth2 Bearer token for it, from a user who may manage the server and its roles. Set client_id and secret on the provider to the credentials of the application that owns the command; the provider then uses the client-credentials grant, which yields a token for the owner. A token from another application is refused with 403, even when both have the same owner, so managing several applications' commands takes one aliased provider per application. A team-owned application does not work, since the team is not a member of the server.
 ---
 
 # discord_application_command_permissions (Resource)
 
 Who may use an application's slash commands in a server — what Server Settings → Integrations edits. The resource owns the whole list for its command: anything set by hand that is not in the configuration is removed on the next apply.
 
-Reading works with the provider's bot token, for any application's commands. **Writing does not**: Discord accepts only an OAuth2 Bearer token for it, from a user who may manage the server and its roles. Set `client_id` and `secret` on the provider to an application owned by such a user; the provider then uses the client-credentials grant, which yields a token for the owner. A team-owned application does not work, since the team is not a member of the server.
+Reading works with the provider's bot token, for any application's commands. **Writing does not**: Discord accepts only an OAuth2 Bearer token for it, from a user who may manage the server and its roles. Set `client_id` and `secret` on the provider to the credentials of **the application that owns the command**; the provider then uses the client-credentials grant, which yields a token for the owner. A token from another application is refused with 403, even when both have the same owner, so managing several applications' commands takes one aliased provider per application. A team-owned application does not work, since the team is not a member of the server.
 
 ## Example Usage
 
 ```terraform
-# Writing needs a Bearer token, so the provider gets an application's client
-# credentials. The application must be owned by a user who may manage the
-# server and its roles; reading works with the bot token alone.
+# Writing needs a Bearer token from the application that owns the command —
+# another application's is refused, even with the same owner. Its owner must be
+# allowed to manage the server and its roles. Reading works with the bot token
+# alone, so plan needs no credentials.
 provider "discord" {
+  alias     = "report_bot"
   token     = var.discord_token
-  client_id = var.discord_client_id
-  secret    = var.discord_client_secret
+  client_id = var.report_bot_client_id
+  secret    = var.report_bot_client_secret
 }
 
 # Hide /report from everyone but moderators and one channel.
 resource "discord_application_command_permissions" "report" {
+  provider = discord.report_bot
+
   server_id      = var.server_id
   application_id = var.bot_application_id
   command_id     = var.report_command_id
