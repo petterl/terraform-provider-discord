@@ -171,15 +171,10 @@ func applyForumChannelPatch(ctx context.Context, client *discordgo.Session, chan
 	return err
 }
 
-// readForumChannelFields fetches the channel JSON and writes forum-specific
-// fields back into the schema. Required because older discordgo Channel
-// structs don't expose these fields.
-func readForumChannelFields(ctx context.Context, client *discordgo.Session, channelID string, d *schema.ResourceData) error {
-	endpoint := discordgo.EndpointChannel(channelID)
-	body, err := client.RequestWithBucketID("GET", endpoint, nil, endpoint, discordgo.WithContext(ctx))
-	if err != nil {
-		return err
-	}
+// readForumChannelFields writes forum-specific fields from a raw channel object
+// back into the schema. Required because older discordgo Channel structs don't
+// expose these fields.
+func readForumChannelFields(body []byte, d *schema.ResourceData) error {
 	var resp channelReadResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return err
