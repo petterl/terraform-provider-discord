@@ -1,6 +1,7 @@
 package discord
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -282,6 +283,10 @@ func resourceChannelCreate(ctx context.Context, d *schema.ResourceData, m interf
 		}
 	}
 
+	if err := applyDefaultAutoArchiveDuration(ctx, client, channel.ID, d, false); err != nil {
+		return append(diags, diag.Errorf("Failed to set default_auto_archive_duration on %s: %s", channel.ID, err.Error())...)
+	}
+
 	if !isCategoryCh {
 		if v, ok := d.GetOk("sync_perms_with_category"); ok && v.(bool) {
 			if channel.ParentID == "" {
@@ -305,9 +310,17 @@ func resourceChannelRead(ctx context.Context, d *schema.ResourceData, m interfac
 	var diags diag.Diagnostics
 	client := m.(*Context).Session
 
-	channel, err := client.Channel(d.Id(), discordgo.WithContext(ctx))
+	// Fetched raw rather than through client.Channel so the fields discordgo's
+	// Channel lacks (forum config, default_auto_archive_duration) come from
+	// the same response instead of a second GET per channel.
+	endpoint := discordgo.EndpointChannel(d.Id())
+	body, err := client.RequestWithBucketID("GET", endpoint, nil, endpoint, discordgo.WithContext(ctx))
 	if err != nil {
 		return diag.Errorf("Failed to fetch channel %s: %s", d.Id(), err.Error())
+	}
+	var channel *discordgo.Channel
+	if err := json.Unmarshal(body, &channel); err != nil {
+		return diag.Errorf("Failed to decode channel %s: %s", d.Id(), err.Error())
 	}
 
 	channelType, ok := getTextChannelType(channel.Type)
@@ -319,6 +332,12 @@ func resourceChannelRead(ctx context.Context, d *schema.ResourceData, m interfac
 	d.Set("type", channelType)
 	d.Set("name", channel.Name)
 	d.Set("position", channel.Position)
+
+	if channelHasThreads(channelType) {
+		if err := readDefaultAutoArchiveDuration(body, d); err != nil {
+			return diag.Errorf("Failed to read default_auto_archive_duration for %s: %s", channel.ID, err.Error())
+		}
+	}
 
 	switch channelType {
 	case "text", "news":
@@ -332,7 +351,7 @@ func resourceChannelRead(ctx context.Context, d *schema.ResourceData, m interfac
 			d.Set("topic", channel.Topic)
 			d.Set("nsfw", channel.NSFW)
 			d.Set("rate_limit_per_user", channel.RateLimitPerUser)
-			if err := readForumChannelFields(ctx, client, channel.ID, d); err != nil {
+			if err := readForumChannelFields(body, d); err != nil {
 				return diag.Errorf("Failed to read forum channel config for %s: %s", channel.ID, err.Error())
 			}
 		}
@@ -389,6 +408,10 @@ func resourceChannelUpdate(ctx context.Context, d *schema.ResourceData, m interf
 		if err := applyForumChannelPatch(ctx, client, d.Id(), d, true); err != nil {
 			return diag.Errorf("Failed to apply forum channel config to %s: %s", d.Id(), err.Error())
 		}
+	}
+
+	if err := applyDefaultAutoArchiveDuration(ctx, client, d.Id(), d, true); err != nil {
+		return diag.Errorf("Failed to set default_auto_archive_duration on %s: %s", d.Id(), err.Error())
 	}
 
 	if channelType != "category" {

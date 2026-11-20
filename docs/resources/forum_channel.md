@@ -54,6 +54,7 @@ resource "discord_forum_channel" "announcements" {
 
 - `available_tags` (Block List, Max: 20) Tags that can be applied to threads in this forum. Discord allows up to 20 tags per channel. (see [below for nested schema](#nestedblock--available_tags))
 - `category` (String) ID of category to place this channel in.
+- `default_auto_archive_duration` (Number) Minutes of inactivity after which new threads in this channel are archived, unless the thread's creator picks another value. Discord accepts `60`, `1440`, `4320` or `10080` (1 week, the maximum). Existing threads keep their own value.
 - `default_forum_layout` (Number) Default layout for the forum. `0` = not set, `1` = list view, `2` = gallery view.
 - `default_reaction_emoji` (Block List, Max: 1) Default emoji used for the new-post reaction button in the forum. (see [below for nested schema](#nestedblock--default_reaction_emoji))
 - `default_sort_order` (Number) Default order to sort posts in the forum. `0` = recent activity (Discord default), `1` = creation date.

@@ -39,6 +39,7 @@ resource "discord_text_channel" "announcements" {
 ### Optional
 
 - `category` (String) ID of category to place this channel in.
+- `default_auto_archive_duration` (Number) Minutes of inactivity after which new threads in this channel are archived, unless the thread's creator picks another value. Discord accepts `60`, `1440`, `4320` or `10080` (1 week, the maximum). Existing threads keep their own value.
 - `nsfw` (Boolean) Whether the channel is NSFW.
 - `position` (Number, Deprecated) Position of the channel, `0`-indexed. **Deprecated** — Discord normalises channel positions per-type within each category, which makes per-channel position values diverge from what you set in HCL and produces permanent state drift. Use `discord_channel_order` instead to manage ordering atomically via Discord's bulk reorder endpoint.
 - `rate_limit_per_user` (Number) Slowmode: minimum number of seconds a user has to wait between sending messages. `0` disables slowmode. Discord caps the value at `21600` (6 hours).
